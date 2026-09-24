@@ -1535,9 +1535,13 @@ public class Parquet {
           for (String property : READ_PROPERTIES_TO_REMOVE) {
             conf.unset(property);
           }
+          // populate before constructing the builder: HadoopReadOptions.Builder parses several
+          // fields (e.g. allocation size, vectored IO) from the Configuration once, at
+          // construction time, not from later set(key, value) calls.
+          properties.forEach(conf::set);
           optionsBuilder = HadoopReadOptions.builder(conf);
         } else {
-          optionsBuilder = ParquetReadOptions.builder(new PlainParquetConfiguration());
+          optionsBuilder = ParquetReadOptions.builder(new PlainParquetConfiguration(properties));
         }
 
         for (Map.Entry<String, String> entry : properties.entrySet()) {
@@ -1552,7 +1556,6 @@ public class Parquet {
           optionsBuilder.withDecryption(fileDecryptionProperties);
         }
 
-        optionsBuilder.withUseHadoopVectoredIo(true);
         ParquetReadOptions options = optionsBuilder.build();
 
         NameMapping mapping;
